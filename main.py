@@ -115,7 +115,7 @@ class App(threading.Thread):
         # Crear interfaz
         self.root = Tk()
         self.root.geometry('500x600')
-        self.root.title('B.I.A.N.C.A')
+        self.root.title('lucIA')
         
         # Imagen waifu
 
