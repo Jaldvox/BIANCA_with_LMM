@@ -1,12 +1,8 @@
 import threading
-
 from PIL import Image, ImageTk
 from tkinter import Tk,Button, PhotoImage, Label
-
-import openai
 from elevenlabs import set_api_key
 from elevenlabs import clone, generate, voices, play
-
 from dotenv import load_dotenv
 
 load_dotenv()
