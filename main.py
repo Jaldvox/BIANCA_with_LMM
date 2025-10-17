@@ -107,28 +107,42 @@ def voice_assistant():
     play(audio_response)
 
 class App(threading.Thread):
+
     def __init__(self):
         threading.Thread.__init__(self)
         self.start()
+        
+        # Crear interfaz
+        self.root = Tk()
+        self.root.geometry('500x600')
+        self.root.title('B.I.A.N.C.A')
+        
+        # Imagen waifu
 
-    def callback(self):
-        self.root.quit()
-    
-    def run(self):
-        root = Tk()
-        root.geometry('500x600')
-        root.title('B.I.A.N.C.A')
-        waifu_img = Image.open("imgs/waifu.png")
+        waifu_img = Image.open("imgs/ 
+        waifu.png")
+
         test = ImageTk.PhotoImage(waifu_img)
-
-        label1 = Label(image=test)
+        label1 = Label(self.root, image=test)
         label1.image = test
-        label1.place(x=60,y=0)
-        microphone_img = PhotoImage(file=r'imgs/microphone.png')
-        microphone_img = microphone_img.subsample(4,4)
-        btn_micro = Button(root,text='Click me',image=microphone_img,command=send_commands)
-        btn_micro.place(x=150,y=425)
-        root.mainloop()
+        label1.place(x=60, y=0)
+        
+        # Botón micrófono
+        microphone_img = 
+        PhotoImage(file=r'imgs/   
+        microphone.png')
+        microphone_img = 
+        microphone_img.subsample(4, 4)
+        btn_micro = Button(self.root,
+        text='Click me',
+        image=microphone_img, 
+                          command=lambda:
+        (send_commands(), self.root.quit()))
+        btn_micro.place(x=150, y=425)
+        
+        # Iniciar loop
+
+        self.root.mainloop()
 
 if __name__ == '__main__':
     app = App()
