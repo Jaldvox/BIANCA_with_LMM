@@ -1,8 +1,3 @@
-import whisper
-import pyaudio
-import wave
-import os
-import ffmpeg
 import threading
 
 from PIL import Image, ImageTk
@@ -32,46 +27,39 @@ WAIFU_VOICE = voices[-1]
 
 model = whisper.load_model("small")
 
-def speech_to_text(audio_file:str):
-    # load audio and pad/trim it to fit 30 seconds
-    audio = whisper.load_audio(audio_file)
-    audio = whisper.pad_or_trim(audio)
-
-    # make log-Mel spectrogram and move to the same device as the model
-    mel = whisper.log_mel_spectrogram(audio).to(model.device)
-
-    # detect the spoken language
-    _, probs = model.detect_language(mel)
-    print(f"Detected language: {max(probs, key=probs.get)}")
-
-    # decode the audio
-    options = whisper.DecodingOptions(fp16 = False)
-    result = whisper.decode(model, mel, options)
-    # print the recognized text
-    print(result.text)
-    return result.text
-
-
-def record_audio():
+def voice_assistant():
+    """
+    Función unificada que graba audio, lo convierte a texto, 
+    procesa el comando con ChatGPT y reproduce la respuesta en audio.
+    """
+    import pyaudio
+    import wave
+    import whisper
+    import ffmpeg
+    import os
+    import openai
+    from elevenlabs import generate, play
+    
+    # Inicializar PyAudio
     audio = pyaudio.PyAudio()
-    # configurar la grabación de audio
+    
+    # Configurar y grabar audio
     stream = audio.open(format=FORMAT, channels=CHANNELS,
                         rate=RATE, input=True,
                         frames_per_buffer=CHUNK)
-
+    
     print("Grabando audio...")
-    # grabar audio en un archivo temporal
     frames = []
     for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
         data = stream.read(CHUNK)
         frames.append(data)
-    # cerrar el stream de audio
+    
     stream.stop_stream()
     stream.close()
     audio.terminate()
-
     print("Grabación finalizada.")
-    # guardar el archivo de audio temporal como archivo .wav
+    
+    # Guardar archivo WAV temporal
     waveFile = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
     waveFile.setnchannels(CHANNELS)
     waveFile.setsampwidth(audio.get_sample_size(FORMAT))
@@ -79,40 +67,48 @@ def record_audio():
     waveFile.writeframes(b''.join(frames))
     waveFile.close()
     print("Archivo de audio temporal guardado como " + WAVE_OUTPUT_FILENAME)
-    import ffmpeg
-    (
-        ffmpeg
-        .input(WAVE_OUTPUT_FILENAME)
-        .output(MP3_OUTPUT_FILENAME, format='mp3')
-        .run()
-    )
-
+    
+    # Convertir a MP3
+    ffmpeg.input(WAVE_OUTPUT_FILENAME).output(MP3_OUTPUT_FILENAME, format='mp3').run()
     print("Archivo de audio temporal convertido a " + MP3_OUTPUT_FILENAME)
-    # eliminar el archivo temporal
     os.remove(WAVE_OUTPUT_FILENAME)
     print("Archivo de audio temporal eliminado")
-
-
-def send_commands():
-    record_audio()
-    command = speech_to_text(MP3_OUTPUT_FILENAME)
-    command = command.lower()
+    
+    # Cargar y procesar audio con Whisper
+    audio_data = whisper.load_audio(MP3_OUTPUT_FILENAME)
+    audio_data = whisper.pad_or_trim(audio_data)
+    mel = whisper.log_mel_spectrogram(audio_data).to(model.device)
+    
+    # Detectar idioma
+    _, probs = model.detect_language(mel)
+    print(f"Detected language: {max(probs, key=probs.get)}")
+    
+    # Transcribir audio
+    options = whisper.DecodingOptions(fp16=False)
+    result = whisper.decode(model, mel, options)
+    command = result.text.lower()
+    print(f"Comando reconocido: {command}")
+    
+    # Eliminar archivo MP3
     os.remove(MP3_OUTPUT_FILENAME)
+    
+    # Determinar prompt según el comando
     if 'hola' in command and 'bianca' in command:
-        run_chatgpt('Saluda de manera formal, presentandote como BIANCA, un asistente virtual potenciado por inteligencia artificial.')
+        prompt = 'Saluda de manera formal, presentandote como BIANCA, un asistente virtual potenciado por inteligencia artificial.'
     else:
-        run_chatgpt(command)
-
-def run_chatgpt(prompt:str):
+        prompt = command
+    
+    # Generar respuesta con ChatGPT
     completion = openai.Completion.create(
-        engine = "text-davinci-003",
-        prompt = prompt,
-        max_tokens = 2048
+        engine="text-davinci-003",
+        prompt=prompt,
+        max_tokens=2048
     )
-    result = completion.choices[0].text
-    audio = generate(text=result, voice=WAIFU_VOICE, model='eleven_multilingual_v1')
-
-    play(audio)
+    result_text = completion.choices[0].text
+    
+    # Generar y reproducir audio de respuesta
+    audio_response = generate(text=result_text, voice=WAIFU_VOICE, model='eleven_multilingual_v1')
+    play(audio_response)
 
 class App(threading.Thread):
     def __init__(self):
