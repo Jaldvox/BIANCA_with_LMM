@@ -90,7 +90,7 @@ def voice_assistant():
     
     # Determinar prompt según el comando
     if 'hola' in command and 'bianca' in command:
-        prompt = 'Saluda de manera formal, presentandote como BIANCA, un asistente virtual potenciado por inteligencia artificial.'
+        prompt = 'Saluda de manera formal, presentandote como LucIA, un asistente virtual potenciado por inteligencia artificial.'
     else:
         prompt = command
     
